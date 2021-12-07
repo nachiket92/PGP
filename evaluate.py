@@ -8,7 +8,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="Config file with dataset parameters", required=True)
 parser.add_argument("-r", "--data_root", help="Root directory with data", required=True)
 parser.add_argument("-d", "--data_dir", help="Directory to extract data", required=True)
-parser.add_argument("-o", "--output_dir", help="Directory to save checkpoints and logs", required=True)
+parser.add_argument("-o", "--output_dir", help="Directory to save results", required=True)
+parser.add_argument("-w", "--checkpoint", help="Path to pre-trained or intermediate checkpoint", required=True)
 args = parser.parse_args()
 
 
@@ -25,5 +26,5 @@ with open(args.config, 'r') as yaml_file:
 
 
 # Evaluate
-evaluator = Evaluator(cfg, args.data_root, args.data_dir, os.path.join(args.output_dir, 'checkpoints', 'best.tar'))
+evaluator = Evaluator(cfg, args.data_root, args.data_dir, args.checkpoint)
 evaluator.evaluate(output_dir=args.output_dir)

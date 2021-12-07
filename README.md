@@ -38,6 +38,7 @@ pip install imageio
 pip install tensorboard
 ```
 
+
 ## Dataset
 
 1. Download the [nuScenes dataset](https://www.nuscenes.org/download). For this project we just need the following.
@@ -65,4 +66,19 @@ pip install tensorboard
 3. Run the following script to extract pre-processed data. This speeds up training significantly.
 ```
 python preprocess.py -c configs/preprocess_nuscenes.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data
+```
+
+
+## Inference
+
+1. You can download the trained model weights using [this link]()
+
+2. To evaluate on the nuScenes val set run the following script. This will generate a text file with evaluation metrics at the specified output directory. 
+```
+python evaluate.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
+```
+
+3. To visualize predictions run the following script. This will generate gifs for a set of instance tokens (track ids) from nuScenes val at the specified output directory.  
+```
+python visualize.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
 ```

@@ -71,9 +71,9 @@ python preprocess.py -c configs/preprocess_nuscenes.yml -r path/to/nuScenes/root
 
 ## Inference
 
-1. You can download the trained model weights using [this link]()
+1. You can download the trained model weights using [this link]().
 
-2. To evaluate on the nuScenes val set run the following script. This will generate a text file with evaluation metrics at the specified output directory. 
+2. To evaluate on the nuScenes val set run the following script. This will generate a text file with evaluation metrics at the specified output directory. The results should match the [benchmark entry]() on Eval.ai. 
 ```
 python evaluate.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
 ```

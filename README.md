@@ -7,6 +7,16 @@
 
 This repository contains code for ["Multimodal trajectory prediction conditioned on lane-graph traversals"](https://arxiv.org/abs/2106.15004) by Nachiket Deo, Eric M. Wolff and Oscar Beijbom, presented at CoRL 2021.  
 
+```bibtex
+@inproceedings{deo2021multimodal,
+  title={Multimodal Trajectory Prediction Conditioned on Lane-Graph Traversals},
+  author={Deo, Nachiket and Wolff, Eric and Beijbom, Oscar},
+  booktitle={5th Annual Conference on Robot Learning},
+  year={2021}
+}
+```
+
+
 **Note:** While I'm one of the authors of the paper, this is an independent re-implementation of the original code developed during an internship at Motional. The code follows the implementation details in the paper. Hope this helps!
  -Nachiket   
 

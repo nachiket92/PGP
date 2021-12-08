@@ -1,0 +1,101 @@
+# Dataset and dataloader parameters
+dataset: 'nuScenes'
+version: 'v1.0-trainval'
+agent_setting: 'single_agent'
+input_representation: 'graphs'
+
+train_set_args: &ds_args
+  split: 'train'
+  t_h: 2
+  t_f: 6
+  map_extent: [ -50, 50, -20, 80 ]
+  polyline_resolution: 1
+  polyline_length: 20
+  traversal_horizon: 15
+  random_flips: True
+
+val_set_args:
+  <<: *ds_args
+  split: 'train_val'
+  random_flips: False
+
+test_set_args:
+  <<: *ds_args
+  split: 'val'
+  random_flips: False
+
+batch_size: 32
+num_workers: 8
+
+
+# Encoder parameters
+encoder_type: 'pgp_encoder'
+encoder_args:
+  target_agent_feat_size: 5
+  target_agent_emb_size: 16
+  target_agent_enc_size: 32
+  node_feat_size: 6
+  node_emb_size: 16
+  node_enc_size: 32
+  nbr_feat_size: 5
+  nbr_emb_size: 16
+  nbr_enc_size: 32
+  num_gat_layers: 2
+
+# Aggregator parameters
+aggregator_type: 'pgp'
+aggregator_args:
+  pre_train: False
+  target_agent_enc_size: 32
+  node_enc_size: 32
+  pi_h1_size: 32
+  pi_h2_size: 32
+  horizon: 15
+  num_samples: 1000
+  emb_size: 128
+  num_heads: 32
+
+
+# Decoder parameters
+decoder_type: 'lvm'
+decoder_args:
+  num_samples: 1000
+  op_len: 12
+  hidden_size: 128
+  encoding_size: 160
+  agg_type: 'sample_specific'
+  lv_dim: 5
+  num_clusters: 10
+
+
+# Optimizer parameters
+optim_args:
+  lr: 0.0001
+
+
+losses: ['min_ade_k', 'pi_bc']
+loss_weights: [1, 0.5]
+loss_args:
+  - k: 10
+  - dummy: 0
+
+
+tr_metrics: ['min_ade_k', 'miss_rate_k', 'pi_bc']
+tr_metric_args:
+  - k: 10
+  - k: 10
+    dist_thresh: 2
+  - dummy: 0
+
+val_metrics: ['min_ade_k','min_ade_k', 'miss_rate_k', 'miss_rate_k', 'pi_bc']
+val_metric_args:
+  - k: 5
+  - k: 10
+  - k: 5
+    dist_thresh: 2
+  - k: 10
+    dist_thresh: 2
+  - dummy: 0
+
+
+log_freq: 100

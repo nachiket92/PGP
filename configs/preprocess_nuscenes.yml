@@ -1,0 +1,35 @@
+dataset: 'nuScenes'
+version: 'v1.0-trainval'
+agent_setting: 'single_agent'
+input_representation: 'graphs'
+
+train_set_args:
+  split: 'train'
+  t_h: 2
+  t_f: 6
+  map_extent: [-50, 50, -20, 80]
+  polyline_resolution: 1
+  polyline_length: 20
+  traversal_horizon: 15
+
+val_set_args:
+  split: 'train_val'
+  t_h: 2
+  t_f: 6
+  map_extent: [-50, 50, -20, 80]
+  polyline_resolution: 1
+  polyline_length: 20
+  traversal_horizon: 15
+
+test_set_args:
+  split: 'val'
+  t_h: 2
+  t_f: 6
+  map_extent: [-50, 50, -20, 80]
+  polyline_resolution: 1
+  polyline_length: 20
+  traversal_horizon: 15
+
+batch_size: 32
+num_workers: 8
+verbosity: True

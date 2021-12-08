@@ -85,12 +85,12 @@ You can download the trained model weights using [this link]().
 
 To evaluate on the nuScenes val set run the following script. This will generate a text file with evaluation metrics at the specified output directory. The results should match the [benchmark entry]() on Eval.ai. 
 ```shell
-python evaluate.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
+python evaluate.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
 ```
 
 To visualize predictions run the following script. This will generate gifs for a set of instance tokens (track ids) from nuScenes val at the specified output directory.  
 ```shell
-python visualize.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
+python visualize.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -w path/to/trained/weights
 ```
 
 
@@ -98,7 +98,7 @@ python visualize.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/direct
 
 To train the model from scratch, run
 ```shell
-python train.py -c configs/pgp_gatx0_lvm.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -n 150
+python train.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -n 150
 ```
 
 The training script will save training checkpoints and tensorboard logs in the output directory.

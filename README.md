@@ -1,6 +1,6 @@
 # Multimodal Trajectory Prediction Conditioned on Lane-Graph Traversals
 
-![](https://github.com/nachiket92/PGP/blob/main/intro.gif)
+![](https://github.com/nachiket92/PGP/blob/main/assets/intro.gif)
 
 
 

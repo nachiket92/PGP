@@ -45,10 +45,8 @@ class PGPEncoder(PredictionEncoder):
         self.node_encoder = nn.GRU(args['node_emb_size'], args['node_enc_size'], batch_first=True)
 
         # Surrounding agent encoder
-        self.nbr_pedestrian_emb = nn.Linear(args['nbr_feat_size'], args['nbr_emb_size'])
-        self.nbr_pedestrian_enc = nn.GRU(args['nbr_emb_size'], args['nbr_enc_size'], batch_first=True)
-        self.nbr_vehicle_emb = nn.Linear(args['nbr_feat_size'], args['nbr_emb_size'])
-        self.nbr_vehicle_enc = nn.GRU(args['nbr_emb_size'], args['nbr_enc_size'], batch_first=True)
+        self.nbr_emb = nn.Linear(args['nbr_feat_size'] + 1, args['nbr_emb_size'])
+        self.nbr_enc = nn.GRU(args['nbr_emb_size'], args['nbr_enc_size'], batch_first=True)
 
         # Agent-node attention
         self.query_emb = nn.Linear(args['node_enc_size'], args['node_enc_size'])
@@ -107,13 +105,15 @@ class PGPEncoder(PredictionEncoder):
 
         # Encode surrounding agents
         nbr_vehicle_feats = inputs['surrounding_agent_representation']['vehicles']
+        nbr_vehicle_feats = torch.cat((nbr_vehicle_feats, torch.zeros_like(nbr_vehicle_feats[:, :, :, 0:1])), dim=-1)
         nbr_vehicle_masks = inputs['surrounding_agent_representation']['vehicle_masks']
-        nbr_vehicle_embedding = self.leaky_relu(self.nbr_vehicle_emb(nbr_vehicle_feats))
-        nbr_vehicle_enc = self.variable_size_gru_encode(nbr_vehicle_embedding, nbr_vehicle_masks, self.nbr_vehicle_enc)
+        nbr_vehicle_embedding = self.leaky_relu(self.nbr_emb(nbr_vehicle_feats))
+        nbr_vehicle_enc = self.variable_size_gru_encode(nbr_vehicle_embedding, nbr_vehicle_masks, self.nbr_enc)
         nbr_ped_feats = inputs['surrounding_agent_representation']['pedestrians']
+        nbr_ped_feats = torch.cat((nbr_ped_feats, torch.ones_like(nbr_ped_feats[:, :, :, 0:1])), dim=-1)
         nbr_ped_masks = inputs['surrounding_agent_representation']['pedestrian_masks']
-        nbr_ped_embedding = self.leaky_relu(self.nbr_pedestrian_emb(nbr_ped_feats))
-        nbr_ped_enc = self.variable_size_gru_encode(nbr_ped_embedding, nbr_ped_masks, self.nbr_pedestrian_enc)
+        nbr_ped_embedding = self.leaky_relu(self.nbr_emb(nbr_ped_feats))
+        nbr_ped_enc = self.variable_size_gru_encode(nbr_ped_embedding, nbr_ped_masks, self.nbr_enc)
 
         # Agent-node attention
         nbr_encodings = torch.cat((nbr_vehicle_enc, nbr_ped_enc), dim=1)

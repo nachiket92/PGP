@@ -1,0 +1,5 @@
+min_ade_5: 1.29
+min_ade_10: 0.97
+miss_rate_5: 0.54
+miss_rate_10: 0.35
+pi_bc: 3.47

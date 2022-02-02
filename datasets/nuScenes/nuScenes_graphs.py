@@ -280,9 +280,9 @@ class NuScenesGraphs(NuScenesVector):
         node_seq = np.zeros(self.traversal_horizon)
         evf = np.zeros_like(s_next)
 
-        # Get indefinite future trajectory:
+        # Get future trajectory:
         i_t, s_t = self.token_list[idx].split("_")
-        fut_xy = self.helper.get_future_for_agent(i_t, s_t, 300, True)
+        fut_xy = self.helper.get_future_for_agent(i_t, s_t, 6, True)
         fut_interpolated = np.zeros((fut_xy.shape[0] * 10 + 1, 2))
         param_query = np.linspace(0, fut_xy.shape[0], fut_xy.shape[0] * 10 + 1)
         param_given = np.linspace(0, fut_xy.shape[0], fut_xy.shape[0] + 1)

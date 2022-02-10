@@ -132,9 +132,11 @@ class PGP(PredictionAggregator):
         :return:
         """
         with torch.no_grad():
+
             # Useful variables:
             batch_size = pi.shape[0]
             max_nodes = pi.shape[1]
+            batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, self.num_samples).view(-1).to(device)
 
             # Initialize output
             sampled_traversals = torch.zeros(batch_size, self.num_samples, self.horizon).long().to(device)
@@ -156,7 +158,6 @@ class PGP(PredictionAggregator):
             for n in range(1, self.horizon):
 
                 # Gather policy at appropriate indices:
-                batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, self.num_samples).view(-1).to(device)
                 pi_s = pi[batch_idcs, s]
 
                 # Sample edges

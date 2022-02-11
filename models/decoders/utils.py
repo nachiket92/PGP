@@ -10,6 +10,7 @@ from scipy.spatial.distance import cdist
 # Initialize device:
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 # Initialize ray:
 num_cpus = psutil.cpu_count(logical=False)
 ray.init(num_cpus=num_cpus, log_to_driver=False)
@@ -51,56 +52,61 @@ def bivariate_gaussian_activation(ip: torch.Tensor) -> torch.Tensor:
 
 
 @ray.remote
-def cluster(k: int, data: np.ndarray):
+def cluster_and_rank(k: int, data: np.ndarray):
     """
-    Cluster using ray.remote to process a batch in parallel. Seems to be faster than multiprocessing.
-    """
-    clustering_op = KMeans(n_clusters=k, n_init=1, max_iter=10, init='random').fit(data)
-    return {'lbls': clustering_op.labels_, 'ctrs': clustering_op.cluster_centers_}
-
-
-@ray.remote
-def rank_clusters(cluster_cnts, cluster_ctrs):
-    """
-    Rank the K clustered trajectories using Ward's criterion. Start with K cluster centers and cluster counts.
-    Find the two clusters to merge based on Ward's criterion. Smaller of the two will get assigned rank K.
-    Merge the two clusters. Repeat process to assign ranks K-1, K-2, ..., 2.
+    Combines the clustering and ranking steps so that ray.remote gets called just once
     """
 
-    cluster_centers = cluster_ctrs.copy()
-    cluster_counts = cluster_cnts.copy()
-    num_clusters = len(cluster_counts)
-    cluster_ids = np.arange(num_clusters)
-    ranks = np.ones(num_clusters)
+    def cluster(n_clusters: int, x: np.ndarray):
+        """
+        Cluster using Scikit learn
+        """
+        clustering_op = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, init='random').fit(x)
+        return clustering_op.labels_, clustering_op.cluster_centers_
 
-    for i in range(num_clusters, 0, -1):
+    def rank_clusters(cluster_counts, cluster_centers):
+        """
+        Rank the K clustered trajectories using Ward's criterion. Start with K cluster centers and cluster counts.
+        Find the two clusters to merge based on Ward's criterion. Smaller of the two will get assigned rank K.
+        Merge the two clusters. Repeat process to assign ranks K-1, K-2, ..., 2.
+        """
 
-        # Compute Ward distances:
-        centroid_dists = cdist(cluster_centers, cluster_centers)
-        n1 = cluster_counts.reshape(1, -1).repeat(len(cluster_counts), axis=0)
-        n2 = n1.transpose()
-        wts = n1 * n2 / (n1 + n2)
-        dists = wts * centroid_dists + np.diag(np.inf * np.ones(len(cluster_counts)))
+        num_clusters = len(cluster_counts)
+        cluster_ids = np.arange(num_clusters)
+        ranks = np.ones(num_clusters)
 
-        # Get clusters with min Ward distance and select cluster with fewer counts
-        c1, c2 = np.unravel_index(dists.argmin(), dists.shape)
-        c = c1 if cluster_counts[c1] <= cluster_counts[c2] else c2
-        c_ = c2 if cluster_counts[c1] <= cluster_counts[c2] else c1
+        for i in range(num_clusters, 0, -1):
+            # Compute Ward distances:
+            centroid_dists = cdist(cluster_centers, cluster_centers)
+            n1 = cluster_counts.reshape(1, -1).repeat(len(cluster_counts), axis=0)
+            n2 = n1.transpose()
+            wts = n1 * n2 / (n1 + n2)
+            dists = wts * centroid_dists + np.diag(np.inf * np.ones(len(cluster_counts)))
 
-        # Assign rank i to selected cluster
-        ranks[cluster_ids[c]] = i
+            # Get clusters with min Ward distance and select cluster with fewer counts
+            c1, c2 = np.unravel_index(dists.argmin(), dists.shape)
+            c = c1 if cluster_counts[c1] <= cluster_counts[c2] else c2
+            c_ = c2 if cluster_counts[c1] <= cluster_counts[c2] else c1
 
-        # Merge clusters and update identity of merged cluster
-        cluster_centers[c_] = (cluster_counts[c_] * cluster_centers[c_] + cluster_counts[c] * cluster_centers[c]) /\
-                              (cluster_counts[c_] + cluster_counts[c])
-        cluster_counts[c_] += cluster_counts[c]
+            # Assign rank i to selected cluster
+            ranks[cluster_ids[c]] = i
 
-        # Discard merged cluster
-        cluster_ids = np.delete(cluster_ids, c)
-        cluster_centers = np.delete(cluster_centers, c, axis=0)
-        cluster_counts = np.delete(cluster_counts, c)
+            # Merge clusters and update identity of merged cluster
+            cluster_centers[c_] = (cluster_counts[c_] * cluster_centers[c_] + cluster_counts[c] * cluster_centers[c]) /\
+                                  (cluster_counts[c_] + cluster_counts[c])
+            cluster_counts[c_] += cluster_counts[c]
 
-    return ranks
+            # Discard merged cluster
+            cluster_ids = np.delete(cluster_ids, c)
+            cluster_centers = np.delete(cluster_centers, c, axis=0)
+            cluster_counts = np.delete(cluster_counts, c)
+
+        return ranks
+
+    cluster_lbls, cluster_ctrs = cluster(k, data)
+    cluster_cnts = np.unique(cluster_lbls, return_counts=True)[1]
+    cluster_ranks = rank_clusters(cluster_cnts.copy(), cluster_ctrs.copy())
+    return {'lbls': cluster_lbls, 'ranks': cluster_ranks, 'counts': cluster_cnts}
 
 
 def cluster_traj(k: int, traj: torch.Tensor):
@@ -121,21 +127,16 @@ def cluster_traj(k: int, traj: torch.Tensor):
     data = traj[:, :, 0::3, :]
     data = data.reshape(batch_size, num_samples, -1).detach().cpu().numpy()
 
-    # Get clustering outputs using ray.remote
-    cluster_ops = ray.get([cluster.remote(k, data[i]) for i in range(batch_size)])
-
-    # Cluster counts
+    # Cluster and rank
+    cluster_ops = ray.get([cluster_and_rank.remote(k, data_slice) for data_slice in data])
     cluster_lbls = [cluster_op['lbls'] for cluster_op in cluster_ops]
-    cluster_counts = [np.unique(cluster_lbl, return_counts=True)[1] for cluster_lbl in cluster_lbls]
-    cnt_tensor = torch.as_tensor(cluster_counts).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).to(device)
-
-    # Rank clusters
-    cluster_ranks = ray.get([rank_clusters.remote(cluster_counts[i], cluster_ops[i]['ctrs'])
-                             for i in range(batch_size)])
+    cluster_counts = [cluster_op['counts'] for cluster_op in cluster_ops]
+    cluster_ranks = [cluster_op['ranks'] for cluster_op in cluster_ops]
 
     # Compute mean (clustered) traj and scores
     lbls = torch.as_tensor(cluster_lbls).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).long().to(device)
     traj_summed = torch.zeros(batch_size, k, traj_len, 2).to(device).scatter_add(1, lbls, traj)
+    cnt_tensor = torch.as_tensor(cluster_counts).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).to(device)
     traj_clustered = traj_summed / cnt_tensor
     scores = 1 / torch.as_tensor(cluster_ranks).to(device)
     scores = scores / torch.sum(scores, dim=1)[0]

@@ -51,12 +51,12 @@ def bivariate_gaussian_activation(ip: torch.Tensor) -> torch.Tensor:
 
 
 @ray.remote
-def cluster(cluster_obj: KMeans, data: np.ndarray):
+def cluster(k: int, data: np.ndarray):
     """
     Cluster using ray.remote to process a batch in parallel. Seems to be faster than multiprocessing.
     """
-    clustering_op = cluster_obj.fit(data)
-    return clustering_op
+    clustering_op = KMeans(n_clusters=k, n_init=1, max_iter=10, init='random').fit(data)
+    return {'lbls': clustering_op.labels_, 'ctrs': clustering_op.cluster_centers_}
 
 
 def ward_merge_dist(cluster_cnts, cluster_ctrs):
@@ -127,16 +127,16 @@ def cluster_traj(k: int, traj: torch.Tensor):
     data = traj[:, :, 0::3, :]
     data = data.reshape(batch_size, num_samples, -1).detach().cpu().numpy()
 
-    # Initialize clustering objects
-    cluster_objs = [KMeans(n_clusters=k, n_init=1, max_iter=20, init='random') for _ in range(batch_size)]
-
     # Get clustering outputs using ray.remote
-    cluster_ops = ray.get([cluster.remote(cluster_objs[i], data[i]) for i in range(batch_size)])
-    cluster_lbls = [cluster_op.labels_ for cluster_op in cluster_ops]
-    cluster_counts = [np.unique(cluster_ops[i].labels_.copy(), return_counts=True)[1] for i in range(batch_size)]
+    cluster_ops = ray.get([cluster.remote(k, data[i]) for i in range(batch_size)])
+
+    # Cluster counts
+    cluster_lbls = [cluster_op['lbls'] for cluster_op in cluster_ops]
+    cluster_counts = [np.unique(cluster_lbl, return_counts=True)[1] for cluster_lbl in cluster_lbls]
     cnt_tensor = torch.as_tensor(cluster_counts).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).to(device)
-    cluster_ranks = [rank_clusters(cluster_counts[i], cluster_ops[i].cluster_centers_.copy())
-                     for i in range(batch_size)]
+
+    # Rank clusters
+    cluster_ranks = [rank_clusters(cluster_counts[i], cluster_ops[i]['ctrs'].copy()) for i in range(batch_size)]
 
     # Compute mean (clustered) traj and scores
     lbls = torch.as_tensor(cluster_lbls).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).long().to(device)

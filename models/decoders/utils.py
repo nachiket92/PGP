@@ -122,8 +122,6 @@ def cluster_traj(k: int, traj: torch.Tensor):
     batch_size = traj.shape[0]
     num_samples = traj.shape[1]
     traj_len = traj.shape[2]
-    traj_clustered = torch.zeros(batch_size, k, traj_len, 2).to(device)
-    scores = torch.zeros(batch_size, k).to(device)
 
     # Down-sample traj along time dimension for faster clustering
     data = traj[:, :, 0::3, :]
@@ -136,16 +134,15 @@ def cluster_traj(k: int, traj: torch.Tensor):
     cluster_ops = ray.get([cluster.remote(cluster_objs[i], data[i]) for i in range(batch_size)])
     cluster_lbls = [cluster_op.labels_ for cluster_op in cluster_ops]
     cluster_counts = [np.unique(cluster_ops[i].labels_.copy(), return_counts=True)[1] for i in range(batch_size)]
+    cnt_tensor = torch.as_tensor(cluster_counts).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).to(device)
     cluster_ranks = [rank_clusters(cluster_counts[i], cluster_ops[i].cluster_centers_.copy())
                      for i in range(batch_size)]
 
     # Compute mean (clustered) traj and scores
-    for batch_idx, traj_samples in enumerate(traj):
-        for n in range(k):
-            idcs = np.where(cluster_lbls[batch_idx] == n)[0]
-            traj_clustered[batch_idx, n] = torch.mean(traj_samples[idcs], dim=0)
-
-        scores[batch_idx] = 1 / torch.from_numpy(cluster_ranks[batch_idx]).to(device)
-        scores[batch_idx] = scores[batch_idx] / torch.sum(scores[batch_idx])
+    lbls = torch.as_tensor(cluster_lbls).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).long().to(device)
+    traj_summed = torch.zeros(batch_size, k, traj_len, 2).to(device).scatter_add(1, lbls, traj)
+    traj_clustered = traj_summed / cnt_tensor
+    scores = 1 / torch.as_tensor(cluster_ranks).to(device)
+    scores = scores / torch.sum(scores, dim=1)[0]
 
     return traj_clustered, scores

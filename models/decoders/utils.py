@@ -128,7 +128,7 @@ def cluster_traj(k: int, traj: torch.Tensor):
     data = data.reshape(batch_size, num_samples, -1).detach().cpu().numpy()
 
     # Initialize clustering objects
-    cluster_objs = [KMeans(n_clusters=k, n_init=1, max_iter=100, init='random') for _ in range(batch_size)]
+    cluster_objs = [KMeans(n_clusters=k, n_init=1, max_iter=20, init='random') for _ in range(batch_size)]
 
     # Get clustering outputs using ray.remote
     cluster_ops = ray.get([cluster.remote(cluster_objs[i], data[i]) for i in range(batch_size)])

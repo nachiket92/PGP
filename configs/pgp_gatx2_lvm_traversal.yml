@@ -11,7 +11,7 @@ train_set_args: &ds_args
   map_extent: [ -50, 50, -20, 80 ]
   polyline_resolution: 1
   polyline_length: 20
-  traversal_horizon: 10
+  traversal_horizon: 15
   random_flips: True
 
 val_set_args:
@@ -50,7 +50,7 @@ aggregator_args:
   node_enc_size: 32
   pi_h1_size: 32
   pi_h2_size: 32
-  horizon: 10
+  horizon: 15
   num_samples: 1000
   emb_size: 128
   num_heads: 32

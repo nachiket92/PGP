@@ -10,7 +10,7 @@ train_set_args:
   map_extent: [-50, 50, -20, 80]
   polyline_resolution: 1
   polyline_length: 20
-  traversal_horizon: 10
+  traversal_horizon: 15
 
 val_set_args:
   split: 'train_val'
@@ -19,7 +19,7 @@ val_set_args:
   map_extent: [-50, 50, -20, 80]
   polyline_resolution: 1
   polyline_length: 20
-  traversal_horizon: 10
+  traversal_horizon: 15
 
 test_set_args:
   split: 'val'
@@ -28,7 +28,7 @@ test_set_args:
   map_extent: [-50, 50, -20, 80]
   polyline_resolution: 1
   polyline_length: 20
-  traversal_horizon: 10
+  traversal_horizon: 15
 
 batch_size: 32
 num_workers: 8

@@ -61,7 +61,7 @@ def cluster_and_rank(k: int, data: np.ndarray):
         """
         Cluster using Scikit learn
         """
-        clustering_op = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, init='random').fit(x)
+        clustering_op = KMeans(n_clusters=n_clusters, n_init=1, max_iter=100, init='random').fit(x)
         return clustering_op.labels_, clustering_op.cluster_centers_
 
     def rank_clusters(cluster_counts, cluster_centers):

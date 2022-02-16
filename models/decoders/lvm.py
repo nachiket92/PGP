@@ -58,7 +58,7 @@ class LVM(PredictionDecoder):
 
         # Sample latent variable and concatenate with aggregated encoding
         batch_size = agg_encoding.shape[0]
-        z = torch.randn(batch_size, self.num_samples, self.lv_dim).to(device)
+        z = torch.randn(batch_size, self.num_samples, self.lv_dim, device=device)
         agg_encoding = torch.cat((agg_encoding, z), dim=2)
         h = self.leaky_relu(self.hidden(agg_encoding))
 

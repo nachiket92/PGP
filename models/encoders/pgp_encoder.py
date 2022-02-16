@@ -187,14 +187,14 @@ class PGPEncoder(PredictionEncoder):
 
             # Scatter back to appropriate batch index
             masks_for_scattering = masks_for_batching.squeeze(3).repeat(1, 1, encoding_batched.shape[-1])
-            encoding = torch.zeros(masks_for_scattering.shape).to(device)
+            encoding = torch.zeros(masks_for_scattering.shape, device=device)
             encoding = encoding.masked_scatter(masks_for_scattering, encoding_batched)
 
         else:
             batch_size = feat_embedding.shape[0]
             max_num = feat_embedding.shape[1]
             hidden_state_size = gru.hidden_size
-            encoding = torch.zeros((batch_size, max_num, hidden_state_size)).to(device)
+            encoding = torch.zeros((batch_size, max_num, hidden_state_size), device=device)
 
         return encoding
 
@@ -206,17 +206,17 @@ class PGPEncoder(PredictionEncoder):
         batch_size = s_next.shape[0]
         max_nodes = s_next.shape[1]
         max_edges = s_next.shape[2]
-        adj_mat = torch.diag(torch.ones(max_nodes)).unsqueeze(0).repeat(batch_size, 1, 1).bool()
+        adj_mat = torch.diag(torch.ones(max_nodes, device=device)).unsqueeze(0).repeat(batch_size, 1, 1).bool()
 
-        dummy_vals = torch.arange(max_nodes).unsqueeze(0).unsqueeze(2).repeat(batch_size, 1, max_edges)
-        dummy_vals = dummy_vals.float().to(device)
+        dummy_vals = torch.arange(max_nodes, device=device).unsqueeze(0).unsqueeze(2).repeat(batch_size, 1, max_edges)
+        dummy_vals = dummy_vals.float()
         s_next[edge_type == 0] = dummy_vals[edge_type == 0]
         batch_indices = torch.arange(batch_size).unsqueeze(1).unsqueeze(2).repeat(1, max_nodes, max_edges)
         src_indices = torch.arange(max_nodes).unsqueeze(0).unsqueeze(2).repeat(batch_size, 1, max_edges)
         adj_mat[batch_indices[:, :, :-1], src_indices[:, :, :-1], s_next[:, :, :-1].long()] = True
         adj_mat = adj_mat | torch.transpose(adj_mat, 1, 2)
 
-        return adj_mat.to(device)
+        return adj_mat
 
 
 class GAT(nn.Module):

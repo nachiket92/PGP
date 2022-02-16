@@ -141,10 +141,10 @@ class PGP(PredictionAggregator):
             # Useful variables:
             batch_size = pi.shape[0]
             max_nodes = pi.shape[1]
-            batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, self.num_samples).view(-1).to(device)
+            batch_idcs = torch.arange(batch_size, device=device).unsqueeze(1).repeat(1, self.num_samples).view(-1)
 
             # Initialize output
-            sampled_traversals = torch.zeros(batch_size, self.num_samples, self.horizon).long().to(device)
+            sampled_traversals = torch.zeros(batch_size, self.num_samples, self.horizon, device=device).long()
 
             # Set up dummy self transitions for goal states:
             pi_dummy = torch.zeros_like(pi)
@@ -199,8 +199,8 @@ class PGP(PredictionAggregator):
         batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, max_nodes * max_nbrs)
         dst_node_enc = node_encodings[batch_idcs, dst_idcs].reshape(batch_size, max_nodes, max_nbrs, node_enc_size)
         target_agent_enc = target_agent_encoding.unsqueeze(1).unsqueeze(2).repeat(1, max_nodes, max_nbrs, 1)
-        edge_enc = torch.cat((torch.as_tensor(edge_type[:, :, :-1] == 1).unsqueeze(3).float().to(device),
-                              torch.as_tensor(edge_type[:, :, :-1] == 2).unsqueeze(3).float().to(device)), dim=3)
+        edge_enc = torch.cat((torch.as_tensor(edge_type[:, :, :-1] == 1, device=device).unsqueeze(3).float(),
+                              torch.as_tensor(edge_type[:, :, :-1] == 2, device=device).unsqueeze(3).float()), dim=3)
         enc = torch.cat((target_agent_enc, src_node_enc, dst_node_enc, edge_enc), dim=3)
         enc_goal = torch.cat((target_agent_enc[:, :, 0, :], src_node_enc[:, :, 0, :]), dim=2)
 

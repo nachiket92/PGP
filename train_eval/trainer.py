@@ -179,7 +179,7 @@ class Trainer:
         Computes loss given model outputs and ground truth labels
         """
         loss_vals = [loss.compute(model_outputs, ground_truth) for loss in self.losses]
-        total_loss = torch.tensor(0).float().to(device)
+        total_loss = torch.as_tensor(0, device=device).float()
         for n in range(len(loss_vals)):
             total_loss += self.loss_weights[n] * loss_vals[n]
 

@@ -134,11 +134,11 @@ def cluster_traj(k: int, traj: torch.Tensor):
     cluster_ranks = [cluster_op['ranks'] for cluster_op in cluster_ops]
 
     # Compute mean (clustered) traj and scores
-    lbls = torch.as_tensor(cluster_lbls).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).long().to(device)
-    traj_summed = torch.zeros(batch_size, k, traj_len, 2).to(device).scatter_add(1, lbls, traj)
-    cnt_tensor = torch.as_tensor(cluster_counts).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).to(device)
+    lbls = torch.as_tensor(cluster_lbls, device=device).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2).long()
+    traj_summed = torch.zeros(batch_size, k, traj_len, 2, device=device).scatter_add(1, lbls, traj)
+    cnt_tensor = torch.as_tensor(cluster_counts, device=device).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, traj_len, 2)
     traj_clustered = traj_summed / cnt_tensor
-    scores = 1 / torch.as_tensor(cluster_ranks).to(device)
+    scores = 1 / torch.as_tensor(cluster_ranks, device=device)
     scores = scores / torch.sum(scores, dim=1)[0]
 
     return traj_clustered, scores

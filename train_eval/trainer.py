@@ -37,8 +37,10 @@ class Trainer:
         datasets = {'train': train_set, 'val': val_set}
 
         # Initialize dataloaders
-        self.tr_dl = torch_data.DataLoader(datasets['train'], cfg['batch_size'], True, num_workers=cfg['num_workers'])
-        self.val_dl = torch_data.DataLoader(datasets['val'], cfg['batch_size'], False, num_workers=cfg['num_workers'])
+        self.tr_dl = torch_data.DataLoader(datasets['train'], cfg['batch_size'], shuffle=True,
+                                           num_workers=cfg['num_workers'], pin_memory=True)
+        self.val_dl = torch_data.DataLoader(datasets['val'], cfg['batch_size'], shuffle=False,
+                                            num_workers=cfg['num_workers'], pin_memory=True)
 
         # Initialize model
         self.model = initialize_prediction_model(cfg['encoder_type'], cfg['aggregator_type'], cfg['decoder_type'],
@@ -187,7 +189,7 @@ class Trainer:
         """
         Backpropagate loss
         """
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), grad_clip_thresh)
         self.optimizer.step()

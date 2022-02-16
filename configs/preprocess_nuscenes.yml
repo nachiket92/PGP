@@ -31,5 +31,5 @@ test_set_args:
   traversal_horizon: 15
 
 batch_size: 32
-num_workers: 8
+num_workers: 4
 verbosity: True

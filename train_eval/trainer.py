@@ -37,8 +37,10 @@ class Trainer:
         datasets = {'train': train_set, 'val': val_set}
 
         # Initialize dataloaders
-        self.tr_dl = torch_data.DataLoader(datasets['train'], cfg['batch_size'], True, num_workers=cfg['num_workers'])
-        self.val_dl = torch_data.DataLoader(datasets['val'], cfg['batch_size'], False, num_workers=cfg['num_workers'])
+        self.tr_dl = torch_data.DataLoader(datasets['train'], cfg['batch_size'], shuffle=True,
+                                           num_workers=cfg['num_workers'], pin_memory=True)
+        self.val_dl = torch_data.DataLoader(datasets['val'], cfg['batch_size'], shuffle=False,
+                                            num_workers=cfg['num_workers'], pin_memory=True)
 
         # Initialize model
         self.model = initialize_prediction_model(cfg['encoder_type'], cfg['aggregator_type'], cfg['decoder_type'],
@@ -177,7 +179,7 @@ class Trainer:
         Computes loss given model outputs and ground truth labels
         """
         loss_vals = [loss.compute(model_outputs, ground_truth) for loss in self.losses]
-        total_loss = torch.tensor(0).float().to(device)
+        total_loss = torch.as_tensor(0, device=device).float()
         for n in range(len(loss_vals)):
             total_loss += self.loss_weights[n] * loss_vals[n]
 

@@ -94,32 +94,37 @@ class PGP(PredictionAggregator):
         batch_size = node_encodings.shape[0]
         max_nodes = node_encodings.shape[1]
 
+        # Get unique traversals and form consolidated batch:
+        unique_traversals = [torch.unique(i, dim=0, return_counts=True) for i in sampled_traversals]
+        traversals_batched = torch.cat([i[0] for i in unique_traversals], dim=0)
+        counts_batched = torch.cat([i[1] for i in unique_traversals], dim=0)
+        batch_idcs = torch.cat([n*torch.ones(len(i[1])).long() for n, i in enumerate(unique_traversals)])
+        batch_idcs = batch_idcs.unsqueeze(1).repeat(1, self.horizon)
+
         # Dummy encodings for goal nodes
         dummy_enc = torch.zeros_like(node_encodings)
         node_encodings = torch.cat((node_encodings, dummy_enc), dim=1)
 
         # Gather node encodings along traversed paths
-        batch_idcs = torch.arange(batch_size).unsqueeze(1).unsqueeze(2).repeat(1, self.num_samples, self.horizon)
-        node_enc_selected = node_encodings[batch_idcs, sampled_traversals]
+        node_enc_selected = node_encodings[batch_idcs, traversals_batched]
 
         # Add positional encodings:
-        pos_enc = self.pos_enc(torch.zeros((batch_size * self.num_samples, self.horizon, node_encodings.shape[-1])))
-        pos_enc = pos_enc.view(batch_size, self.num_samples, self.horizon, node_encodings.shape[-1]).to(device)
+        pos_enc = self.pos_enc(torch.zeros_like(node_enc_selected))
         node_enc_selected += pos_enc
 
         # Multi-head attention
-        target_agent_encoding = target_agent_encoding.unsqueeze(1).repeat(1, self.num_samples, 1)
-        target_agent_enc_batched = target_agent_encoding.view(batch_size * self.num_samples, -1)
-        node_enc_batched = node_enc_selected.view(batch_size * self.num_samples, self.horizon, -1)
+        target_agent_enc_batched = target_agent_encoding[batch_idcs[:, 0]]
         query = self.query_emb(target_agent_enc_batched).unsqueeze(0)
-        keys = self.key_emb(node_enc_batched).permute(1, 0, 2)
-        vals = self.val_emb(node_enc_batched).permute(1, 0, 2)
-        key_padding_mask = torch.as_tensor(sampled_traversals >= max_nodes).view(batch_size * self.num_samples, -1)
+        keys = self.key_emb(node_enc_selected).permute(1, 0, 2)
+        vals = self.val_emb(node_enc_selected).permute(1, 0, 2)
+        key_padding_mask = torch.as_tensor(traversals_batched >= max_nodes)
         att_op, _ = self.mha(query, keys, vals, key_padding_mask)
-        att_op = att_op.squeeze(0).view(batch_size, self.num_samples, -1)
+
+        # Repeat based on counts
+        att_op = att_op.squeeze(0).repeat_interleave(counts_batched, dim=0).view(batch_size, self.num_samples, -1)
 
         # Concatenate target agent encoding
-        agg_enc = torch.cat((target_agent_encoding, att_op), dim=-1)
+        agg_enc = torch.cat((target_agent_encoding.unsqueeze(1).repeat(1, self.num_samples, 1), att_op), dim=-1)
 
         return agg_enc
 
@@ -132,12 +137,14 @@ class PGP(PredictionAggregator):
         :return:
         """
         with torch.no_grad():
+
             # Useful variables:
             batch_size = pi.shape[0]
             max_nodes = pi.shape[1]
+            batch_idcs = torch.arange(batch_size, device=device).unsqueeze(1).repeat(1, self.num_samples).view(-1)
 
             # Initialize output
-            sampled_traversals = torch.zeros(batch_size, self.num_samples, self.horizon).long().to(device)
+            sampled_traversals = torch.zeros(batch_size, self.num_samples, self.horizon, device=device).long()
 
             # Set up dummy self transitions for goal states:
             pi_dummy = torch.zeros_like(pi)
@@ -156,7 +163,6 @@ class PGP(PredictionAggregator):
             for n in range(1, self.horizon):
 
                 # Gather policy at appropriate indices:
-                batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, self.num_samples).view(-1).to(device)
                 pi_s = pi[batch_idcs, s]
 
                 # Sample edges
@@ -193,8 +199,8 @@ class PGP(PredictionAggregator):
         batch_idcs = torch.arange(batch_size).unsqueeze(1).repeat(1, max_nodes * max_nbrs)
         dst_node_enc = node_encodings[batch_idcs, dst_idcs].reshape(batch_size, max_nodes, max_nbrs, node_enc_size)
         target_agent_enc = target_agent_encoding.unsqueeze(1).unsqueeze(2).repeat(1, max_nodes, max_nbrs, 1)
-        edge_enc = torch.cat((torch.as_tensor(edge_type[:, :, :-1] == 1).unsqueeze(3).float().to(device),
-                              torch.as_tensor(edge_type[:, :, :-1] == 2).unsqueeze(3).float().to(device)), dim=3)
+        edge_enc = torch.cat((torch.as_tensor(edge_type[:, :, :-1] == 1, device=device).unsqueeze(3).float(),
+                              torch.as_tensor(edge_type[:, :, :-1] == 2, device=device).unsqueeze(3).float()), dim=3)
         enc = torch.cat((target_agent_enc, src_node_enc, dst_node_enc, edge_enc), dim=3)
         enc_goal = torch.cat((target_agent_enc[:, :, 0, :], src_node_enc[:, :, 0, :]), dim=2)
 

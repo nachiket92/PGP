@@ -189,7 +189,7 @@ class Trainer:
         """
         Backpropagate loss
         """
-        self.optimizer.zero_grad(set_to_none=True)
+        self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), grad_clip_thresh)
         self.optimizer.step()

@@ -5,7 +5,7 @@
 
 
 
-This repository contains code for ["Multimodal trajectory prediction conditioned on lane-graph traversals"](https://arxiv.org/abs/2106.15004) by Nachiket Deo, Eric M. Wolff and Oscar Beijbom, presented at CoRL 2021.  
+This repository contains code for ["Multimodal trajectory prediction conditioned on lane-graph traversals"](https://proceedings.mlr.press/v164/deo22a.html) by Nachiket Deo, Eric M. Wolff and Oscar Beijbom, presented at CoRL 2021.  
 
 ```bibtex
 @inproceedings{deo2021multimodal,

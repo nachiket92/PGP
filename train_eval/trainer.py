@@ -48,7 +48,7 @@ class Trainer:
         self.model = self.model.float().to(device)
 
         # Initialize optimizer
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=cfg['optim_args']['lr'])
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=cfg['optim_args']['lr'])
 
         # Initialize epochs
         self.current_epoch = 0

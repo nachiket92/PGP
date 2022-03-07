@@ -70,7 +70,9 @@ decoder_args:
 
 # Optimizer parameters
 optim_args:
-  lr: 0.0001
+  lr: 0.001
+  scheduler_step: 10
+  scheduler_gamma: 0.5
 
 
 losses: ['min_ade_k', 'pi_bc']

@@ -47,8 +47,10 @@ class Trainer:
                                                  cfg['encoder_args'], cfg['aggregator_args'], cfg['decoder_args'])
         self.model = self.model.float().to(device)
 
-        # Initialize optimizer
+        # Initialize optimizer and scheduler
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=cfg['optim_args']['lr'])
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=cfg['optim_args']['scheduler_step'],
+                                                         gamma=cfg['optim_args']['scheduler_gamma'])
 
         # Initialize epochs
         self.current_epoch = 0
@@ -111,6 +113,9 @@ class Trainer:
             with torch.no_grad():
                 val_epoch_metrics = self.run_epoch('val', self.val_dl)
             self.print_metrics(val_epoch_metrics, self.val_dl, mode='val')
+
+            # Scheduler step
+            self.scheduler.step()
 
             # Update validation metric
             self.val_metric = val_epoch_metrics[self.val_metrics[0].name] / val_epoch_metrics['minibatch_count']
@@ -255,6 +260,7 @@ class Trainer:
         self.model.load_state_dict(checkpoint['model_state_dict'])
         if not just_weights:
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             self.current_epoch = checkpoint['epoch']
             self.val_metric = checkpoint['val_metric']
             self.min_val_metric = checkpoint['min_val_metric']
@@ -267,6 +273,7 @@ class Trainer:
             'epoch': self.current_epoch + 1,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict(),
             'val_metric': self.val_metric,
             'min_val_metric': self.min_val_metric
         }, checkpoint_path)

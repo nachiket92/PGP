@@ -98,7 +98,7 @@ python visualize.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/r
 
 To train the model from scratch, run
 ```shell
-python train.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -n 150
+python train.py -c configs/pgp_gatx2_lvm_traversal.yml -r path/to/nuScenes/root/directory -d path/to/directory/with/preprocessed/data -o path/to/output/directory -n 100
 ```
 
 The training script will save training checkpoints and tensorboard logs in the output directory.
